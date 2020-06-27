@@ -1,9 +1,9 @@
 #import all things for creating path, pygame, time and random for all internal things
-
+import textwrap
 import os
 import random
+import sys
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-
 try:
     import pygame
 except Exception as e:
@@ -18,6 +18,10 @@ pygame.font.init()
 FPS = 60
 WIDTH, HEIGHT = 800, 600
 
+MAIN_BUTTON_WIDTH = 150
+MAIN_BUTTON_HEIGHT = 50
+BACK_BUTTON_WIDTH = 50
+BACK_BUTTON_HEIGHT = 50
 
 #Load inages for ships, BG and laser
 RED_SHIP = pygame.image.load(os.path.join("pics", "pixel_ship_red_small.png"))
@@ -32,7 +36,6 @@ GREEN_LASER = pygame.image.load(os.path.join("pics", "pixel_laser_green.png"))
 BLUE_LASER = pygame.image.load(os.path.join("pics", "pixel_laser_blue.png"))
 
 BACKGROUND = pygame.transform.scale(pygame.image.load(os.path.join("pics", "background-black.png")), (WIDTH, HEIGHT))
-
 
 #Parent class SpaceShip for all ships(player and enemy)
 class SpaceShip:
@@ -199,38 +202,232 @@ def collide(object1, object2):
     return object1.mask.overlap(object2.mask, (distance_x, distance_y)) !=None
 
 
-#main function to call everything
-def main():
+#function that splits large text and displays it in Pygame window. (textwrapping)
+def blit_text(surface, text, pos = (0,0), font = None, max_width = 0, padding_left = 0, padding_right = 0, colour=pygame.Color('white')):
+    #function must take 2 arguments: window itself and text, optional are: position of the text`s top left corner, pygame font, width of the text e.g. width of block in css/html
+            #padding from both sides to control positions better and colour of the font
+
+    words = [word.split(' ') for word in text.splitlines()]  # 2D array where each row is a list of words.
+    space = font.size(' ')[0]  # The width of a space.
+
+    #if max_width wasn`t changet, it declares it as window`s width-padding
+    if max_width == 0:
+        max_width = surface.get_width() - padding_right - padding_right
+
+    max_height = surface.get_height()
+
+    #changes x-position of the pos tuple to add the paddinf up
+    pos = list(pos)
+    pos[0] += padding_left
+    x, y = pos
+
+
+    #iterates through each line in the 2D array
+    for line in words:
+        #iterates through each word in line
+        for word in line:
+            word_surface = font.render(word, 0, colour)
+            word_width, word_height = word_surface.get_size()
+            #checks if starting coordinate + width of the word is less than maximal width available
+            # BUG: text can go off the edge because of max_width and starting position, however it won`t go off is starting positon is 0
+            if x + word_width >= max_width + pos[0]:
+                x = pos[0]  # Reset the x.
+                y += word_height  # Start on new row.
+            surface.blit(word_surface, (x, y))
+            x += word_width + space*2
+        x = pos[0]  # Reset the x.
+        y += word_height
+
+
+class Button:
+    #declares variables for buttons
+    def __init__(self, x, y, width, height, text = None, colour = None, font = None):
+        self.x = x
+        self.y = y
+        self.height = height
+        self.width = width
+        self.text = text
+        self.colour = colour
+        if font:
+            self.font = font
+        else:
+            self.font = pygame.font.SysFont('comsicsans', 40)
+
+    #displays button on window
+    def draw(self, win,outline = (255,255,255)):
+        if self.text:
+            writing = self.font.render(self.text, 1, (255,255,255))
+        #if outline exists it will draw outline
+        if outline:
+            pygame.draw.rect(win, outline, (self.x-2, self.y-2, self.width+4, self.height+4), 0)
+        pygame.draw.rect(win, self.colour, (self.x, self.y, self.width, self.height), 0)
+        win.blit(writing, (self.x + (self.width//2 - writing.get_width()//2), self.y + (self.height//2 - writing.get_height()//2)))
+        pygame.display.update()
+
+    #checks if cursor is over the button
+    def is_over(self, pos):
+        if pos[0] > self.x and pos[0] < self.x + self.width:
+            if pos[1] > self.y and pos[1] < self.y + self.height:
+                return True
+        return False
+
+#creates help menu where people can find rules and movements
+def option_help():
     run = True
 
-    font = pygame.font.SysFont('comicsans', 60)
-    #infinate loop for playing
+    win.blit(BACKGROUND, (0,0))
+    # constant check so window won`t close and check for button hover and press
     while run:
-        win.blit(BACKGROUND, (0,0))
-        #create 2 texts with explanation of game
-        label_start = font.render('WASD, Space - shoot', 1, (65,65,100))
-        label = font.render('Press spacebar to start...', 1, (65,65,100))
+        #declares fonts
+        welcome_font = pygame.font.SysFont('Papyrus', 60)
+        font =  pygame.font.SysFont('Papyrus', 20)
 
-        height = HEIGHT//2 - label.get_height()/2
-        width = WIDTH//2 - label.get_width()/2
-        #place labels on the screen
-        win.blit(label, (WIDTH//2 - label.get_width()//2, HEIGHT//2 -  label.get_height()//2 - 20))
-        win.blit(label_start, (WIDTH//2 - label_start.get_width()//2, HEIGHT//2 -  label_start.get_height()//2 + 120))
-        #renders the screen
-        pygame.display.flip()
-        # pygame.QUIT so it won`t rause error when its quited
+        #displays "inscruction"
+        welcome_text = welcome_font.render('Instructions', 1, (255,255,255))
+        win.blit(welcome_text, (win.get_width()//2 -welcome_text.get_width()//2, 10))
+
+        #displays chosen text coming through function
+        player_text = 'Movement = "WASD" and arrows. You have got 100HP wich is shown under the yellow Spaceship\nTo shoot you should press "Spacebar", however, there is a delay between each bullet'
+        blit_text(win, player_text, pos = (150, 100), font = font, max_width = 500)
+
+        #displays chosen text coming through function
+
+        enemy_text = 'There are different types of enemies. Greater Wave - harder opponents.\nThere are some ships which are extremely fast and some which kill you with the first shot'
+        blit_text(win, enemy_text, pos = (150, 250), font = font, max_width = 500)
+
+        #displays chosen text coming through function
+
+        extra_text = 'If you collide with any enemy - you lose some HP.\nIf you survive the wave - you get HP.\n\nGood Luck!'
+        blit_text(win, extra_text, pos = (150, 400), font = font, max_width = 500)
+
+        #places the button
+        exit_button = Button(x = 10, y = win.get_height() - 100, width = BACK_BUTTON_WIDTH, height = BACK_BUTTON_HEIGHT, text = '<--', colour = (0, 0, 0), font = (pygame.font.SysFont('comsicsans', 30)))
+
+        #checks for position of cursor
+        pos = pygame.mouse.get_pos()
+
+        if exit_button.is_over(pos):
+            exit_button.colour = (255,0,0)
+        else:
+            exit_button.colour = (0, 0, 0, 0)
+        exit_button.draw(win)
+
+
+        #if window closes - everything stops
         for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                sys.exit()
+            #if button is pressed - function stops and main will be displayed again
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if exit_button.is_over(pos):
+                    return
+
+
+
+#function for credits
+def option_credits():
+    run = True
+
+    win.blit(BACKGROUND, (0,0))
+    while run:
+        welcome_font = pygame.font.SysFont('Papyrus', 60)
+        font =  pygame.font.SysFont('Papyrus', 20)
+
+        welcome_text = welcome_font.render('Credits', 1, (255,255,255))
+        win.blit(welcome_text, (win.get_width()//2 -welcome_text.get_width()//2, 10))
+
+        tim_credits_text = 'Idea came from YouTube "Tech With Tim". All assets reserved to TechWithTim.\n'
+        blit_text(win, tim_credits_text, pos = (100, 200), font = font, max_width = 600)
+
+        my_credits_text = 'Project`s GitHub: "https://github.com/Mamin-gamer/space-Invaders".\nMost of the code, algorithm and design are reserved to:\nDmitrii Ponomarev aka. @mamin_gamer.'
+        blit_text(win, my_credits_text, pos = (100, 300), font = font, max_width = 500)
+
+        exit_button = Button(x = 10, y = win.get_height() - 100, width = BACK_BUTTON_WIDTH, height = BACK_BUTTON_HEIGHT, text = '<--', colour = (0, 0, 0), font = (pygame.font.SysFont('comsicsans', 30)))
+
+        pos = pygame.mouse.get_pos()
+
+        if exit_button.is_over(pos):
+            exit_button.colour = (255,0,0)
+        else:
+            exit_button.colour = (0, 0, 0, 0)
+        exit_button.draw(win)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if exit_button.is_over(pos):
+                    return
+
+
+
+
+
+#main function to call everything
+def main():
+
+    font = pygame.font.SysFont('comsicsans', 60)
+
+    #creates a lits of buttons to iterate throung
+    buttons = []
+    play_button = Button(x = win.get_width()//2 - MAIN_BUTTON_WIDTH//2, y = win.get_height() - 400, width = MAIN_BUTTON_WIDTH, height = MAIN_BUTTON_HEIGHT, text = 'Play', colour = (0, 0, 0))
+    help_button = Button(x = win.get_width()//2 - MAIN_BUTTON_WIDTH//2, y = win.get_height() - 300, width = MAIN_BUTTON_WIDTH, height = MAIN_BUTTON_HEIGHT, text = 'Help', colour = (0, 0, 0))
+    credits_button = Button(x = win.get_width()//2 - MAIN_BUTTON_WIDTH//2, y = win.get_height() - 200, width = MAIN_BUTTON_WIDTH, height = MAIN_BUTTON_HEIGHT, text = 'Credits', colour = (0, 0, 0))
+    exit_button = Button(x = 10, y = win.get_height() - 100, width = BACK_BUTTON_WIDTH, height = BACK_BUTTON_HEIGHT, text = 'Quit', colour = (0, 0, 0), font = (pygame.font.SysFont('comsicsans', 30)))
+
+    buttons.extend((play_button, help_button, credits_button, exit_button))
+
+    welcome_text = font.render('Choose your option', 1, (255,255,255))
+    win.blit(BACKGROUND, (0,0))
+    win.blit(welcome_text, (win.get_width()//2 - welcome_text.get_width()//2, 100))
+
+    show_up = False
+    run = True
+    while run:
+        #constant retreive of cursor position
+        pos = pygame.mouse.get_pos()
+
+        #iterate through pygame events
+        for event in pygame.event.get():
+            #if window closes - app destroys
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
                 break
+            #iterates throung each button and checks hovers and presses
+            for btn in buttons:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if btn.is_over(pos):
+                        if btn.text == 'Play':
+                            main_game()
 
-            #if spacebar is pressed - game starts
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    main_game()
+                        if btn.text == 'Help':
+                            option_help()
+
+                        if btn.text == 'Credits':
+                            option_credits()
+
+                        if btn.text == 'Quit':
+                            run = False
+                            pygame.quit()
+                            break
+
+                        #resets backgroung and text
+                        win.blit(BACKGROUND, (0,0))
+                        win.blit(welcome_text, (win.get_width()//2 - welcome_text.get_width()//2, 100))
+
+                if btn.is_over(pos):
+                    btn.colour = (255,0,0)
+                else:
+                    btn.colour = (0, 0, 0, 0)
+                btn.draw(win)
+
 
     pygame.quit()
+
 
 
 #function of game itself
@@ -248,15 +445,22 @@ def main_game():
 
     player_velocity = 5
 
-    laser_velocity = 7
+    laser_velocity = 8
     enemy_amount = 5
     enemies = []
     #creates player entity
-    player = Player(WIDTH//2, HEIGHT//2, health = 10, damage = player_damage)
+    player = Player(WIDTH//2 - PLAYER_SHIP.get_width()//2 , HEIGHT//2, health = 100, damage = player_damage)
 
     #updates the screen with writing lives and wave No on the top
     def reset():
         win.blit(BACKGROUND, (0,0))
+
+        #'draws' the player calling special method
+        player.draw(win)
+        #draw every enemy on the screen
+        for enemy in enemies:
+            enemy.draw(win)
+
         lives_label = font.render(f'lives: {lifes}', 1, (255,255,255))
         lvl_label = font.render(f'Wave No: {lvl}', 1, (255,255,255))
         win.blit(lives_label, (10,10))
@@ -268,18 +472,13 @@ def main_game():
             win.blit(lost_label, (WIDTH //2 - lost_label.get_width()//2, HEIGHT//2 - lost_label.get_height()//2))
             win.blit(lost_label2, (WIDTH //2 - lost_label2.get_width()//2, HEIGHT//2 - lost_label.get_height()//2+20))
 
-        #'draws' the player calling special method
-        player.draw(win)
-        #draw every enemy on the screen
-        for enemy in enemies:
-            enemy.draw(win)
+
 
         pygame.display.update()
 
 
 
     while run:
-
         clock.tick(FPS)
         reset()
 
@@ -287,16 +486,17 @@ def main_game():
         if lifes <= 0 or player.health <=0:
             play = False
 
-        # wait for 5 seconds so player will see how many waves he survived in
+        # wait for 3 seconds so player will see how many waves he survived in
         if play == False:
-            while counter < FPS * 5:
+            reset()
+            while counter < FPS * 3:
                 counter+=1
                 clock.tick(FPS)
-                reset()
-            else:
-                #finishes the game
-                run = False
 
+            else:
+                #finishes the game and cleans the screen
+                run = False
+                win.blit(BACKGROUND, (0,0))
         #checks for Pygame event so by closing the window it will nit give any errors
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -401,9 +601,14 @@ def main_game():
 
 
 
+
+
 #sets window with constant width and height
 win = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Space Raiders')
-if __name__ == '__main__':
+pygame.display.set_caption('Space Invaders')
 
+
+
+
+if __name__ == '__main__':
     main()
