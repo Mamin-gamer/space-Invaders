@@ -254,7 +254,7 @@ class Button:
             self.font = pygame.font.SysFont('comsicsans', 40)
 
     #displays button on window
-    def draw(self, win,outline = (255,255,255)):
+    def draw(self, win, outline = (255,255,255)):
         if self.text:
             writing = self.font.render(self.text, 1, (255,255,255))
         #if outline exists it will draw outline
@@ -490,6 +490,12 @@ def main_game():
         if play == False:
             reset()
             while counter < FPS * 3:
+
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        quit()
+
                 counter+=1
                 clock.tick(FPS)
 
@@ -497,6 +503,7 @@ def main_game():
                 #finishes the game and cleans the screen
                 run = False
                 win.blit(BACKGROUND, (0,0))
+
         #checks for Pygame event so by closing the window it will nit give any errors
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
