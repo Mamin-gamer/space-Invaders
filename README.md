@@ -10,5 +10,9 @@ To shoot you should press "Spacebar", however, there is a delay between each bul
 There are different types of enemies. Greater Wave - harder opponents.
 There are some ships which are extremely fast and some which kill you with the first shot
 
+<<<<<<< HEAD
 If you collide with any enemy - you lose some HP.
 If you survive the wave - you get HP
+=======
+If you collide with any enemy - you lose some HP.\nIf you survive the wave - you get HP
+>>>>>>> d8d688ef696ffbd68c8613d2ea4ebeff050a5e24
